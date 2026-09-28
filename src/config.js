@@ -19,8 +19,9 @@ export const config = {
     user: required("DB_USER"),
     password: required("DB_PASSWORD"),
     // Same lesson as the climate-alarm worker (2026-07-18): without explicit timeouts a silently
-    // dropped connection hangs a query forever with nothing in the error log. GateCheck starts
-    // flocks through set_production, which is slow on a big farm, so it gets a longer budget.
+    // dropped connection hangs a query forever with nothing in the error log. This budget is per
+    // call and cycle.js calls GateCheck once per farm, so it only has to cover starting ONE farm
+    // (set_production for each of its houses).
     requestTimeout: Number(process.env.DB_REQUEST_TIMEOUT_MS || 120000),
     connectionTimeout: Number(process.env.DB_CONNECTION_TIMEOUT_MS || 15000),
     options: {

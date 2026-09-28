@@ -11,6 +11,11 @@ InnoFarmPro. Every 30 minutes it calls two stored procedures and logs what they 
    (`n_active 3 → 1`) and create each house's flock by copying the last finished crop. If not, the
    waiting date moves to the next day.
 
+`GateCheck` is called **once per farm** that has a waiting crop (not once for all farms): starting a
+crop runs `set_production` for every house, so one call over many farms could hit `DB_REQUEST_TIMEOUT_MS`
+and cancel every farm after the slow one. Per farm, a timeout/error only costs that farm one cycle, and
+each log line shows how long that farm took (`…ms`) plus a `took=` total per cycle.
+
 All rules live in the SPs, not here. Source + write-up are in the frontend repo:
 `migrations/sql/V20260928_01..04` and `CONTEXT2.md §59`.
 

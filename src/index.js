@@ -13,8 +13,13 @@ if (dryRun && !once) {
 
 async function cycle() {
   try {
-    const result = await runCycle({ farmCode: config.farmCode, dryRun });
-    logCycle(result, { dryRun });
+    const startedAt = Date.now();
+    const result = await runCycle({
+      farmCode: config.farmCode,
+      dryRun,
+      nextCheckMinutes: Math.round(config.cycleIntervalMs / 60000),
+    });
+    logCycle(result, { dryRun, elapsedMs: Date.now() - startedAt });
     return true;
   } catch (err) {
     console.error(`[cycle] ${new Date().toISOString()} failed:`, err.message);

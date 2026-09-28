@@ -1,5 +1,5 @@
 {
-  "name": "smartfarm-auto-start-crop-worker",
+  "name": "innofarm-auto-start-crop-worker",
   "version": "0.1.0",
   "description": "Standalone Node.js worker for SmartFarm Pro 'Auto start new crop': every cycle it calls dbo.AutoStartCrop_CreatePending (create the waiting crop once rest days are over) and dbo.AutoStartCrop_GateCheck (start it once a CKALE is online and the day's total sampling > 100). All rules live in those two SPs - see README.md.",
   "type": "module",
