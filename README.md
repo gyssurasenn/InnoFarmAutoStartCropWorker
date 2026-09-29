@@ -1,15 +1,24 @@
+> **RETIRED 2026-09-29** — the team's exe now calls `EXEC dbo.AutoStartCrop_Run @n_farm` at each farm's midnight (frontend repo
+> `CONTEXT2.md §61`). This worker still calls the old SPs (`CreatePending`/`GateCheck`) and must be uninstalled
+> (`.\scripts\uninstall-service.ps1` + `schtasks /delete /tn InnoFarmAutoStartCropWatchdog /f`) before `AutoStartCrop_Run` goes live.
+
 # InnoFarm Auto Start Crop Worker
 
 Windows Service (Node.js + NSSM) that runs the **Auto start new crop** feature of SmartFarm Pro /
-InnoFarmPro. Every 30 minutes it calls two stored procedures and logs what they did:
+InnoFarmPro. Once a day (`RUN_AT`, default just after midnight) it calls two stored procedures and logs
+what they did (design changed 2026-09-29, frontend repo `CONTEXT2.md §60`):
 
 1. `dbo.AutoStartCrop_CreatePending` — for farms with *Enable auto start new crop* on, whose last crop
    has ended and whose rest days (`Farm_Option.n_auto_start_rest_days`) are over: create the next crop
-   as **waiting** (`Crop_Main.n_active = 3`).
-2. `dbo.AutoStartCrop_GateCheck` — for every waiting crop: if at least one CKALE is online (last update
-   ≤ 5 min) **and** the farm's total CKALE sampling today (raw `ColSummary.n_num`) is > 100, start it
-   (`n_active 3 → 1`) and create each house's flock by copying the last finished crop. If not, the
-   waiting date moves to the next day.
+   as **waiting** (`Crop_Main.n_active = 3`) together with its per-house flock plan
+   (`dbo.AutoStartCrop_Plan`, copied from the last finished crop) so the Manage Production page shows it.
+2. `dbo.AutoStartCrop_GateCheck` — for every waiting crop whose day has **ended**: if the farm's total
+   CKALE sampling of that day (raw `ColSummary.n_num`) was > 100, start it on that day (`n_active 3 → 1`,
+   flocks created from the plan). If not, the plan's start date moves to today (end/catch dates follow).
+   Calling it more often is harmless — during the waiting day it only records today's sampling.
+
+All logic is in the SPs, so the team's own exe can replace this worker by running the same two `EXEC`s
+once after midnight. `RUN_AT` blank → runs every `CYCLE_INTERVAL_MS` instead (testing / demo).
 
 `GateCheck` is called **once per farm** that has a waiting crop (not once for all farms): starting a
 crop runs `set_production` for every house, so one call over many farms could hit `DB_REQUEST_TIMEOUT_MS`

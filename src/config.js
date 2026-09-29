@@ -31,5 +31,8 @@ export const config = {
     },
   },
   cycleIntervalMs: Number(process.env.CYCLE_INTERVAL_MS || 1800000),
+  // "HH:mm" (server local time) = run once a day at that time + once at startup; blank = every CYCLE_INTERVAL_MS.
+  // GateCheck only decides a waiting crop after its day has ended, so one run just after midnight is enough.
+  runAt: /^\d{1,2}:\d{2}$/.test((process.env.RUN_AT || "").trim()) ? process.env.RUN_AT.trim() : null,
   farmCode: process.env.FARM_CODE ? Number(process.env.FARM_CODE) : null,
 };

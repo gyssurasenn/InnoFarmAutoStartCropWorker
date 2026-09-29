@@ -23,7 +23,8 @@ const STATE_PATH = path.join(PROJECT_DIR, "logs", "watchdog-state.json");
 
 // cycle.js logs a summary line every cycle (default 30 min). 3x the interval = a missed cycle is
 // tolerated, two in a row is treated as a hang.
-const STALE_MS = config.cycleIntervalMs * 3;
+// RUN_AT (daily) mode logs one cycle a day, so allow a day plus slack instead.
+const STALE_MS = config.runAt ? 26 * 60 * 60 * 1000 : config.cycleIntervalMs * 3;
 
 // The team's own test channel for infra alerts (same target the climate-alarm watchdog uses).
 const LINE_TARGET = "Yo#TestSendNotify";

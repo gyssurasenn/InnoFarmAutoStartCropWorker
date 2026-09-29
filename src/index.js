@@ -30,7 +30,11 @@ async function cycle() {
 async function main() {
   console.log(
     `[index] auto-start-crop worker starting db=${config.db.database} farm=${config.farmCode ?? "all"} ` +
-    (once ? `mode=once${dryRun ? " dry-run" : ""}` : `interval=${config.cycleIntervalMs / 60000}min`)
+    (once
+      ? `mode=once${dryRun ? " dry-run" : ""}`
+      : config.runAt
+        ? `daily at ${config.runAt}`
+        : `interval=${config.cycleIntervalMs / 60000}min`)
   );
 
   if (once) {
@@ -41,10 +45,28 @@ async function main() {
   }
 
   // setTimeout after each cycle finishes (not setInterval) so a slow GateCheck can never overlap the next one.
+  // The wait is measured from the cycle's START, not its end: GateCheck stores dt_auto_start_next_check as
+  // "its own start + interval" and the Manage Production card refetches at that time. Waiting a full interval
+  // after the end made every cycle late by its own duration (seen as ~15 s on the card) and drift cycle by cycle.
+  // RUN_AT mode: next run = next occurrence of HH:mm (server local time). The first run happens at startup so a
+  // restart after a missed midnight catches up (GateCheck walks every waiting day that has already ended).
+  const msUntilRunAt = () => {
+    const [h, m] = config.runAt.split(":").map(Number);
+    const now = new Date();
+    const next = new Date(now);
+    next.setHours(h, m, 0, 0);
+    if (next <= now) next.setDate(next.getDate() + 1);
+    return next - now;
+  };
+
   let timer = null;
   const loop = async () => {
+    const startedAt = Date.now();
     await cycle();
-    timer = setTimeout(loop, config.cycleIntervalMs);
+    timer = setTimeout(
+      loop,
+      config.runAt ? msUntilRunAt() : Math.max(config.cycleIntervalMs - (Date.now() - startedAt), 0)
+    );
   };
 
   const shutdown = async (signal) => {
